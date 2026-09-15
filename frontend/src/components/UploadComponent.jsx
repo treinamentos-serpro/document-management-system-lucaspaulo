@@ -74,12 +74,14 @@ export default function UploadComponent({ userId, onUploadSuccess }) {
       </h2>
       <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label htmlFor="document-file-input">Arquivo:</label>
           <input
             ref={fileInputRef}
+            id="document-file-input"
             type="file"
             onChange={handleFileChange}
             disabled={isUploading}
-            aria-label="Selecionar arquivo para upload"
+            aria-describedby={feedback.message ? 'upload-feedback' : undefined}
             style={{
               padding: '0.4rem 0',
               fontSize: '0.95rem',
@@ -106,7 +108,9 @@ export default function UploadComponent({ userId, onUploadSuccess }) {
 
         {feedback.message && (
           <div
-            role="alert"
+            id="upload-feedback"
+            role={feedback.type === 'error' ? 'alert' : 'status'}
+            aria-live={feedback.type === 'error' ? 'assertive' : 'polite'}
             style={{
               padding: '0.6rem 0.8rem',
               borderRadius: '4px',

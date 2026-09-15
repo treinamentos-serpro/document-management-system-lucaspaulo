@@ -45,15 +45,30 @@ class DocumentsService {
       throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
     }
 
-    const exists = await this.documentsRepository.fileExists(document.storageName);
+    let exists;
+    try {
+      exists = await this.documentsRepository.fileExists(document.storageName);
+    } catch (error) {
+      if (error.code === 'INVALID_STORAGE_NAME') {
+        throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
+      }
+      throw error;
+    }
     if (!exists) {
       throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
     }
 
-    return {
-      filePath: this.documentsRepository.resolveFilePath(document.storageName),
-      originalName: document.originalName,
-    };
+    try {
+      return {
+        filePath: this.documentsRepository.resolveFilePath(document.storageName),
+        originalName: document.originalName,
+      };
+    } catch (error) {
+      if (error.code === 'INVALID_STORAGE_NAME') {
+        throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
+      }
+      throw error;
+    }
   }
 
   async discardUploadedFile(file) {

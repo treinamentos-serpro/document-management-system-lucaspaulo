@@ -3,7 +3,7 @@ const path = require('node:path');
 
 class DocumentsRepository {
   constructor(storageDirectory) {
-    this.storageDirectory = storageDirectory;
+    this.storageDirectory = path.resolve(storageDirectory);
     this.documents = new Map();
   }
 
@@ -23,7 +23,21 @@ class DocumentsRepository {
   }
 
   resolveFilePath(storageName) {
-    return path.join(this.storageDirectory, path.basename(storageName));
+    if (typeof storageName !== 'string' || !/^[0-9a-f-]{36}(?:\.[a-z0-9]+)?$/i.test(storageName)) {
+      const error = new Error('Nome físico de arquivo inválido.');
+      error.code = 'INVALID_STORAGE_NAME';
+      throw error;
+    }
+
+    const filePath = path.resolve(this.storageDirectory, storageName);
+    const storagePrefix = `${this.storageDirectory}${path.sep}`;
+    if (!filePath.startsWith(storagePrefix)) {
+      const error = new Error('Caminho de arquivo fora do armazenamento permitido.');
+      error.code = 'INVALID_STORAGE_NAME';
+      throw error;
+    }
+
+    return filePath;
   }
 
   async fileExists(storageName) {

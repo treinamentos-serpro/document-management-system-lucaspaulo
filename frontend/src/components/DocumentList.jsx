@@ -49,7 +49,11 @@ function formatDate(isoDate) {
 export default function DocumentList({ documents = [], userId, isLoading = false, onDownloadError }) {
   if (isLoading) {
     return (
-      <div style={{ padding: '1.5rem', textAlign: 'center', color: '#586069' }}>
+      <div
+        role="status"
+        aria-live="polite"
+        style={{ padding: '1.5rem', textAlign: 'center', color: '#586069' }}
+      >
         <em>Carregando documentos...</em>
       </div>
     );
@@ -75,6 +79,7 @@ export default function DocumentList({ documents = [], userId, isLoading = false
   return (
     <div style={{ overflowX: 'auto' }}>
       <table
+        aria-busy={isLoading}
         style={{
           width: '100%',
           borderCollapse: 'collapse',
@@ -82,12 +87,27 @@ export default function DocumentList({ documents = [], userId, isLoading = false
           fontSize: '0.95rem',
         }}
       >
+        <caption
+          style={{
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            padding: 0,
+            margin: '-1px',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0,
+          }}
+        >
+          Documentos disponíveis para download
+        </caption>
         <thead>
           <tr style={{ borderBottom: '2px solid #e1e4e8', backgroundColor: '#f6f8fa' }}>
-            <th style={{ padding: '0.75rem', fontWeight: '600' }}>Nome do Arquivo</th>
-            <th style={{ padding: '0.75rem', fontWeight: '600', width: '120px' }}>Tamanho</th>
-            <th style={{ padding: '0.75rem', fontWeight: '600', width: '180px' }}>Data de Envio</th>
-            <th style={{ padding: '0.75rem', fontWeight: '600', width: '100px', textAlign: 'center' }}>
+            <th scope="col" style={{ padding: '0.75rem', fontWeight: '600' }}>Nome do Arquivo</th>
+            <th scope="col" style={{ padding: '0.75rem', fontWeight: '600', width: '120px' }}>Tamanho</th>
+            <th scope="col" style={{ padding: '0.75rem', fontWeight: '600', width: '180px' }}>Data de Envio</th>
+            <th scope="col" style={{ padding: '0.75rem', fontWeight: '600', width: '100px', textAlign: 'center' }}>
               Ações
             </th>
           </tr>

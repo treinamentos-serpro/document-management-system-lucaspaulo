@@ -4,21 +4,42 @@
 
 const API_BASE_URL = '/api';
 
+export class ApiError extends Error {
+  constructor(message, code, status) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
 /**
- * Extrai a mensagem de erro da resposta HTTP ou retorna uma mensagem padrão.
+ * Extrai os dados de erro da resposta HTTP.
  * @param {Response} response
- * @returns {Promise<string>}
+ * @returns {Promise<ApiError>}
  */
-async function parseErrorMessage(response) {
+async function parseError(response) {
   try {
     const data = await response.json();
     if (data?.error?.message) {
-      return data.error.message;
+      return new ApiError(data.error.message, data.error.code, response.status);
     }
   } catch {
-    // Se a resposta não for JSON, ignora e usa statusText
+    // Se a resposta não for JSON, usa uma mensagem baseada no status.
   }
-  return `Erro na requisição (${response.status}: ${response.statusText})`;
+  return new ApiError(
+    `Erro na requisição (${response.status}: ${response.statusText})`,
+    'HTTP_ERROR',
+    response.status,
+  );
+}
+
+async function request(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, options);
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return response;
 }
 
 /**
@@ -38,18 +59,13 @@ export async function uploadDocument(file, userId) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${API_BASE_URL}/upload`, {
+  const response = await request('/upload', {
     method: 'POST',
     headers: {
       'X-User-Id': userId.trim(),
     },
     body: formData,
   });
-
-  if (!response.ok) {
-    const errorMessage = await parseErrorMessage(response);
-    throw new Error(errorMessage);
-  }
 
   const data = await response.json();
   return data.document;
@@ -60,22 +76,18 @@ export async function uploadDocument(file, userId) {
  * @param {string} userId - Identificador do usuário.
  * @returns {Promise<Array>} Lista de documentos.
  */
-export async function listDocuments(userId) {
+export async function listDocuments(userId, signal) {
   if (!userId || !userId.trim()) {
     throw new Error('Identificador de usuário é obrigatório.');
   }
 
-  const response = await fetch(`${API_BASE_URL}/documents`, {
+  const response = await request('/documents', {
     method: 'GET',
     headers: {
       'X-User-Id': userId.trim(),
     },
+    signal,
   });
-
-  if (!response.ok) {
-    const errorMessage = await parseErrorMessage(response);
-    throw new Error(errorMessage);
-  }
 
   const data = await response.json();
   return data.documents || [];
@@ -95,17 +107,12 @@ export async function downloadDocument(documentId, userId, fallbackFilename = 'd
     throw new Error('Identificador de usuário é obrigatório.');
   }
 
-  const response = await fetch(`${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/download`, {
+  const response = await request(`/documents/${encodeURIComponent(documentId)}/download`, {
     method: 'GET',
     headers: {
       'X-User-Id': userId.trim(),
     },
   });
-
-  if (!response.ok) {
-    const errorMessage = await parseErrorMessage(response);
-    throw new Error(errorMessage);
-  }
 
   // Tenta extrair o nome do arquivo do header Content-Disposition
   let filename = fallbackFilename;

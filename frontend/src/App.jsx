@@ -13,7 +13,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [globalError, setGlobalError] = useState('');
 
-  const loadDocuments = useCallback(async (currentUserId) => {
+  const loadDocuments = useCallback(async (currentUserId, signal) => {
     if (!currentUserId || !currentUserId.trim()) {
       setDocuments([]);
       return;
@@ -23,9 +23,12 @@ export default function App() {
     setGlobalError('');
 
     try {
-      const docs = await listDocuments(currentUserId);
+      const docs = await listDocuments(currentUserId, signal);
       setDocuments(docs);
     } catch (error) {
+      if (error.name === 'AbortError') {
+        return;
+      }
       setGlobalError(error.message || 'Falha ao carregar lista de documentos.');
       setDocuments([]);
     } finally {
@@ -34,7 +37,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    loadDocuments(userId);
+    const controller = new AbortController();
+    loadDocuments(userId, controller.signal);
+
+    return () => controller.abort();
   }, [userId, loadDocuments]);
 
   const handleUploadSuccess = () => {

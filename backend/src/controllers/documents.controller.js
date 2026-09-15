@@ -65,7 +65,7 @@ class DocumentsController {
     try {
       await this.documentsService.discardUploadedFile(req.file);
     } catch (cleanupError) {
-      return next(cleanupError);
+      console.error('Falha ao remover arquivo de upload após erro.', cleanupError);
     }
 
     if (error.code === 'LIMIT_FILE_SIZE') {
