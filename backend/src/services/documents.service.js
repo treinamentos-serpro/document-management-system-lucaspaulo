@@ -14,14 +14,7 @@ class DocumentsService {
   }
 
   async createDocument(file, owner) {
-    const document = {
-      id: randomUUID(),
-      originalName: file.originalname,
-      storageName: file.filename,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-      owner,
-    };
+    const document = this.buildDocument(file, owner);
 
     try {
       this.documentsRepository.save(document);
@@ -39,16 +32,8 @@ class DocumentsService {
   }
 
   async getDocumentDownload(id, owner) {
-    const document = this.documentsRepository.findById(id);
-
-    if (!document || document.owner !== owner) {
-      throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
-    }
-
-    const exists = await this.documentsRepository.fileExists(document.storageName);
-    if (!exists) {
-      throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
-    }
+    const document = this.findOwnedDocumentOrThrow(id, owner);
+    await this.ensureStoredFileExistsOrThrow(document);
 
     return {
       filePath: this.documentsRepository.resolveFilePath(document.storageName),
@@ -65,6 +50,39 @@ class DocumentsService {
   toPublicDocument(document) {
     const { id, originalName, size, uploadedAt, owner } = document;
     return { id, originalName, size, uploadedAt, owner };
+  }
+
+  buildDocument(file, owner) {
+    return {
+      id: randomUUID(),
+      originalName: file.originalname,
+      storageName: file.filename,
+      size: file.size,
+      uploadedAt: new Date().toISOString(),
+      owner,
+    };
+  }
+
+  findOwnedDocumentOrThrow(id, owner) {
+    const document = this.documentsRepository.findById(id);
+
+    if (!document || document.owner !== owner) {
+      throw this.createDocumentNotFoundError();
+    }
+
+    return document;
+  }
+
+  async ensureStoredFileExistsOrThrow(document) {
+    const exists = await this.documentsRepository.fileExists(document.storageName);
+
+    if (!exists) {
+      throw this.createDocumentNotFoundError();
+    }
+  }
+
+  createDocumentNotFoundError() {
+    return new DocumentError('DOCUMENT_NOT_FOUND', 'Documento não encontrado.');
   }
 }
 
