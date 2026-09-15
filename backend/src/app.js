@@ -11,16 +11,54 @@
 // usando multer com diskStorage. Não utilize provedores externos.
 
 const express = require('express');
+const path = require('node:path');
+const DocumentsRepository = require('./repositories/documents.repository');
+const { DocumentsService } = require('./services/documents.service');
+const DocumentsController = require('./controllers/documents.controller');
+const createDocumentsRouter = require('./routes/documents.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const storageDirectory = process.env.STORAGE_DIR
+  ? path.resolve(process.env.STORAGE_DIR)
+  : path.resolve(__dirname, '../storage');
+const configuredUploadLimit = Number.parseInt(process.env.UPLOAD_LIMIT_BYTES, 10);
+const uploadLimitBytes = Number.isInteger(configuredUploadLimit) && configuredUploadLimit > 0
+  ? configuredUploadLimit
+  : 10 * 1024 * 1024;
+
+const documentsRepository = new DocumentsRepository(storageDirectory);
+const documentsService = new DocumentsService(documentsRepository);
+const documentsController = new DocumentsController(documentsService);
 
 app.use(express.json());
 
-// Endpoint de verificação de saúde. As demais rotas (/upload, /documents,
-// /documents/:id/download) serão implementadas durante o Passo 2.
+// Endpoint de verificação de saúde.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.use(createDocumentsRouter({
+  documentsController,
+  storageDirectory,
+  uploadLimitBytes,
+}));
+
+app.use((req, res) => {
+  res.status(404).json({
+    error: { code: 'ROUTE_NOT_FOUND', message: 'Rota não encontrada.' },
+  });
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  console.error(error);
+  res.status(500).json({
+    error: { code: 'INTERNAL_ERROR', message: 'Ocorreu um erro interno.' },
+  });
 });
 
 if (require.main === module) {
